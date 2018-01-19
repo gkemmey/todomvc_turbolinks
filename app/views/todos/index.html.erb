@@ -1,0 +1,90 @@
+<section id="todoapp">
+  <header id="header" data-turbolinks-permanent>
+    <h1>todos</h1>
+    <%= form_with model: Todo.new, data: { behavior: "has_children_that_clear_after_submission" } do |f| %>
+      <%= f.text_field :title, id: "new-todo",
+                               data: { behavior: "clears_after_submission" },
+                               placeholder: "What needs to be done?",
+                               autofocus: true,
+                               autocomplete: "off" %>
+    <% end %>
+  </header>
+
+  <section id="main">
+    <%= form_with url: update_many_todos_path, scope: :todo, method: :put do |f| %>
+      <% @todos.each do |todo| %>
+        <%= hidden_field_tag "ids[]", todo.id %>
+      <% end %>
+
+      <%= f.check_box :is_completed, checked: @todos.all?(&:is_completed),
+                                     id: "toggle-all",
+                                     data: { behavior: "submit_form_when_clicked" } %>
+      <label for="toggle-all">Mark all as complete</label>
+    <% end %>
+
+    <ul id="todos">
+      <% @todos.each do |todo| %>
+        <li class="<%= 'completed' if todo.is_completed %>" data-behavior="double_click_to_edit">
+          <div class="view">
+            <%= form_with model: todo do |f| %>
+              <%= f.check_box :is_completed, class: "toggle",
+                                             data: { behavior: "submit_form_when_clicked" } %>
+            <% end %>
+
+            <label data-behavior="hidden_after_double_clicking_to_edit"><%= todo.title %></label>
+
+            <%= form_with model: todo, method: "delete" do |f| %>
+              <%= button_tag "", class: "destroy" %>
+            <% end %>
+          </div>
+
+          <%= form_with model: todo, style: "display: none;" do |f| %>
+            <%= f.text_field :title, class: "edit",
+                                     data: {
+                                       behavior: [
+                                         "visible_after_double_clicking_to_edit",
+                                         "submit_form_when_blurred",
+                                         "cancel_edit_on_escape"
+                                       ].join(' ')
+                                     },
+                                     autocomplete: "off" %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+
+  <footer id="footer" class="<%= "hidden" unless @todos.any? || filtering? %>">
+    <span id="todo-count">
+      <%= pluralize @todos.reject(&:is_completed).size, "item" %> left
+    </span>
+
+    <ul id="filters">
+      <li>
+        <%= link_to "All", "/", class: (request.fullpath == '/' ||
+                                        request.fullpath == "/todos") ? "selected" : nil,
+                                id: "all" %>
+      </li>
+      <li>
+        <%= link_to "Active", "/?completed=false",
+                              class: request.fullpath.match("completed=false") ? "selected" : nil,
+                              id: "active" %>
+      </li>
+      <li>
+        <%= link_to "Completed", "/?completed=true",
+                                 class: request.fullpath.match("completed=true") ? "selected" : nil,
+                                 id: "completed" %>
+      </li>
+    </ul>
+
+    <% if @todos.completed(true).count > 0 %>
+      <%= form_with url: destroy_many_todos_path, method: :delete do |f| %>
+        <% @todos.completed(true).pluck(:id).each do |todo| %>
+          <%= hidden_field_tag "ids[]", todo %>
+        <% end %>
+
+        <%= f.button "Clear completed", id: "clear-completed" %>
+      <% end %>
+    <% end %>
+  </footer>
+</section>
